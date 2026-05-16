@@ -1,0 +1,8 @@
+# OneBotV11的正向WebSocket地址
+url = "ws://127.0.0.1:8080"
+
+# 鉴权token，如果没有配置可以留空
+token = ""
+
+# QQ群号
+groupId = "123456789"

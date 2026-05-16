@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "onebot-bridge-mod",
+	"version": "${version}",
+	"name": "OneBot Bridge Mod",
+	"description": "与野生QQ机器人实现群服互通",
+	"authors": [
+		"hongshaoluobotou"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/onebot-bridge-mod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.hongshaoluobotou.OneBotBridgeMod"
+		],
+		"client": [
+			"com.hongshaoluobotou.client.OneBotBridgeModClient"
+		]
+	},
+	"mixins": [
+		"onebot-bridge-mod.mixins.json",
+		{
+			"config": "onebot-bridge-mod.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~26.2-",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
