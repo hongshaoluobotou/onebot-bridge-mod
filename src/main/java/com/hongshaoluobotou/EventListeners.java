@@ -4,10 +4,10 @@ import cn.evole.onebot.client.OneBotClient;
 import cn.evole.onebot.client.annotations.SubscribeEvent;
 import cn.evole.onebot.client.interfaces.Listener;
 import cn.evole.onebot.sdk.entity.ArrayMsg;
+import cn.evole.onebot.sdk.enums.FaceType;
 import cn.evole.onebot.sdk.enums.MsgType;
 import cn.evole.onebot.sdk.event.message.GroupMessageEvent;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import cn.evole.onebot.sdk.util.BotUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
@@ -22,7 +22,6 @@ public class EventListeners implements Listener {
     public final MinecraftServer server;
     private final OneBotClient oneBotClient;
     private final long groupId;
-    private static final Gson GSON = new Gson();
 
     EventListeners(MinecraftServer server, OneBotClient onebot, long groupId) {
         this.server = server;
@@ -32,8 +31,7 @@ public class EventListeners implements Listener {
 
     @SubscribeEvent
     public void onGroup(GroupMessageEvent event) {
-        Config config = Config.get();
-        if (event.getGroupId() != config.groupId) {
+        if (event.getGroupId() != groupId) {
             return;
         }
 
@@ -45,24 +43,19 @@ public class EventListeners implements Listener {
             senderName = "未知用户";
         }
 
-        // 获取消息段：优先用 SDK 解析的 arrayMsg，失败则手动解析 message 字符串
-        List<ArrayMsg> arrayMsgs = event.getArrayMsg();
-        if (arrayMsgs == null || arrayMsgs.isEmpty()) {
-            String msgStr = event.getMessage();
-            if (msgStr != null && msgStr.trim().startsWith("[")) {
-                try {
-                    arrayMsgs = GSON.fromJson(msgStr, new TypeToken<List<ArrayMsg>>() {}.getType());
-                } catch (Exception e) {
-                    LOGGER.warn("无法解析 message 为 ArrayMsg: {}", msgStr);
-                }
-            }
-        }
-
+        // 仅在可能包含消息段时解析，避免纯文本消息的无效开销
+        String rawMessage = event.getRawMessage();
         String formattedMessage;
-        if (arrayMsgs != null && !arrayMsgs.isEmpty()) {
-            formattedMessage = formatArrayMsg(arrayMsgs);
+        if (rawMessage != null && rawMessage.contains("[CQ:")) {
+            try {
+                List<ArrayMsg> arrayMsgs = BotUtils.rawToArrayMsg(rawMessage);
+                formattedMessage = formatArrayMsg(arrayMsgs);
+            } catch (Exception e) {
+                LOGGER.warn("无法转换OneBot的群消息事件", e);
+                formattedMessage = event.getRawMessage();
+            }
         } else {
-            formattedMessage = event.getMessage();
+            formattedMessage = event.getRawMessage();
         }
 
         if (formattedMessage == null || formattedMessage.isEmpty()) {
@@ -96,12 +89,31 @@ public class EventListeners implements Listener {
                     if ("all".equals(qq)) {
                         sb.append("@全体成员 ");
                     } else {
-                        sb.append("@").append(qq != null ? qq : "?").append(" ");
+                        if (qq == null || qq.isBlank()) {
+                            sb.append("@? ");
+                            break;
+                        }
+                        try {
+                            String nickName = BotUtils.getNickname(Long.parseLong(qq));
+                            if (!nickName.isBlank()) {
+                                sb.append("@").append(nickName).append(" ");
+                            } else {
+                                sb.append("@").append(qq).append(" ");
+                            }
+                        } catch (Exception e) {
+                            sb.append("@").append(qq).append(" ");
+                        }
                     }
                 }
                 case face -> {
-                    String id = data.get("id");
-                    sb.append("[表情").append(id != null ? ":" + id : "").append("]");
+                    int id = Integer.parseInt(data.get("id"));
+                    FaceType faceType = FaceType.getFaceType(id);
+                    if (faceType == FaceType.UNKNOWN) {
+                        sb.append("[表情: ").append(id).append("]");
+                    } else {
+                        String faceName = faceType.getName();
+                        sb.append("[表情: ").append(faceName).append("]");
+                    }
                 }
                 case image -> {
                     String summary = data.get("summary");
