@@ -1,6 +1,6 @@
 # OneBot Bridge Mod
 
-一个轻量的Fabric模组，与野生QQ机器人实现群服互通，支持Minecraft 26.2 Snapshot 7
+一个轻量的Fabric模组，与野生QQ机器人实现群服互通，支持Minecraft 26.2-pre-1
 
 ## 功能
 
